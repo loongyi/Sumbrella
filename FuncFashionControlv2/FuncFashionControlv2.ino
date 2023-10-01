@@ -193,20 +193,40 @@ void loop() {
     goals[2]=0;flag_m2=0;m2disres=0;
     goals[3]=0;flag_m3=0;m3disres=0;
 
+  // case 1: // LIFT LEFT UP
+  //   if (state != prev_state){ 
+  //     flag_m1 = 1; 
+  //     posINT_m1 = dxl.getPresentPosition(1);
+  //   }
+  //   if ((m1state==1)||(m1state==100)){m1state = 0;}
+    
+  //   break;
+
   case 1: // LIFT LEFT UP
     if (state != prev_state){ 
-      flag_m1 = 1; 
+      flag_m1 = 1; flag_m2=1;
       posINT_m1 = dxl.getPresentPosition(1);
     }
     if ((m1state==1)||(m1state==100)){m1state = 0;}
+    if ((m2state == 0)){m2state= 1;}
     break;
+
+ // case 2: // LIFT RIGHT UP
+    // if (state != prev_state){ 
+    //   flag_m2 = 1;
+    //   posINT_m2 = dxl.getPresentPosition(2);
+    // }
+    // if ((m2state==1)||(m2state==100)){m2state = 0;}
+    // if ((m1state == 0)){m1state= 1;}
+    // break;
 
   case 2: // LIFT RIGHT UP
     if (state != prev_state){ 
-      flag_m2 = 1;
+      flag_m2 = 1;flag_m1=1;
       posINT_m2 = dxl.getPresentPosition(2);
     }
     if ((m2state==1)||(m2state==100)){m2state = 0;}
+    if ((m1state == 0)){m1state= 1;}
     break;
 
   case 3: //RELEASE LEFT DOWN
