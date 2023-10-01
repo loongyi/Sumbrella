@@ -1,7 +1,14 @@
 # Sumbrella
 Functional Fashion IROS 2023 UoB Softlab team
 
-raspberry pi-openrb-150 arduino for dynamixel control-stm32 pneumatic ciruit
+an umbrella-hat with articulated appendages of origami inspired module arrays
+modules - origami inspired poppers
+cable driven with fabric pneumatic pocket actuators
+
+camera: Oak-D Lite
+we are using RGB camera to identify objects of interest in the frame. It uses a pretrained neural network based on the modile-net ssd dataset. A pair of stereo depth cameras gives distance information. 
+
+raspberry pi 4b-openrb-150 arduino for dynamixel control-stm32 pneumatic ciruit
 dynamixel motor is xl330. pneumatic circuit uses 12v pumps and solenoid valves with PID pressure regulation. We just need to tell the arduino motor controller the motor states, and the pneumatic valve the channel and pressure.
 
 Rpi sends serial to arduino and pneumatic circuit to change their states.
