@@ -154,7 +154,7 @@ static float time = 0.0;
 
 void loop() {
 
-  if (Serial.available()) {
+  if ( Serial.available() && (flag_m1+flag_m2+flag_m3==0) ) {
     //command from RPI received
     //arduino receives serial message when pi +camera detects person
 
@@ -171,6 +171,9 @@ void loop() {
     //motor enable flags, serviced by motor routines
     Serial.flush();
   }
+  //else if (flag_m1+flag_m2+flag_m3>0){
+  //  Serial.flush();
+  //}
 
 
   // DEBUG_SERIAL.print("FLAG  ");
@@ -190,7 +193,7 @@ void loop() {
     goals[2]=0;flag_m2=0;m2disres=0;
     goals[3]=0;flag_m3=0;m3disres=0;
 
-  case 1: // LEFT UP
+  case 1: // LIFT LEFT UP
     if (state != prev_state){ 
       flag_m1 = 1; 
       posINT_m1 = dxl.getPresentPosition(1);
@@ -198,7 +201,7 @@ void loop() {
     if ((m1state==1)||(m1state==100)){m1state = 0;}
     break;
 
-  case 2: // RIGHT UP
+  case 2: // LIFT RIGHT UP
     if (state != prev_state){ 
       flag_m2 = 1;
       posINT_m2 = dxl.getPresentPosition(2);
@@ -206,7 +209,7 @@ void loop() {
     if ((m2state==1)||(m2state==100)){m2state = 0;}
     break;
 
-  case 3: //LEFT DOWN
+  case 3: //RELEASE LEFT DOWN
     if ((state != prev_state)){ 
       flag_m1 = 1;
       posINT_m1 = dxl.getPresentPosition(1);
@@ -214,7 +217,7 @@ void loop() {
     if (m1state==0){m1state = 1;}
     break;
 
-  case 4://RGHT DOWN 
+  case 4://RELEASE RGHT DOWN 
     if (state != prev_state){ 
       flag_m2 = 1; 
       posINT_m2 = dxl.getPresentPosition(2);
@@ -222,7 +225,7 @@ void loop() {
     if (m2state==0){m2state = 1;}
     break;
 
-  case 5://back up
+  case 5://Lift back up
     if (state != prev_state){ 
       flag_m3 = 1; 
       posINT_m3 = dxl.getPresentPosition(3);
@@ -230,7 +233,7 @@ void loop() {
     m3state = 0;
     break;
 
-  case 6://back down
+  case 6://release back down
     if (state != prev_state){ 
       flag_m3 = 1;
       posINT_m3 = dxl.getPresentPosition(3);

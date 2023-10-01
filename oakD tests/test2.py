@@ -8,7 +8,7 @@ import time
 import serial
 
 #for serial connection or not
-testmode =0 # don't change this; fix at 0
+testmode =1 # don't change this; fix at 0
 
 if testmode ==0:
     #Establish Serial ports
@@ -150,19 +150,20 @@ with dai.Device(pipeline) as device:
     
     #params
     personal_space = 1000 #mm
+    mindepthcount = 0
 
 ######################## Editable ##############################
 # Pre testing
     write_pneu('Z')
     write_pneu('B1400')
-    time.sleep(5)
+    time.sleep(3)
     write_pneu('Z')
     
     write_dxl('7\n')
-    time.sleep(5)
+    time.sleep(3)
     
     write_pneu('A1400')
-    time.sleep(5)
+    time.sleep(4)
     
     write_dxl('8\n')
     time.sleep(12)
@@ -279,6 +280,8 @@ with dai.Device(pipeline) as device:
 #                write_dxl('9\n') # wave
             
         # 1. If person = pressurised wihtin 2000mm
+
+       
         if min_depth<2000:#1000mm=1m
             print(str(pcount)+'people detected!  '+str(min_depth)+' - idx '+str(ind[1]))
             if pcount >= 1: # detect person (pcount) more than 1
@@ -286,55 +289,75 @@ with dai.Device(pipeline) as device:
                     write_pneu('Z') #Z=all deflated
                     write_pneu('A1500') #inflate
                     flag_p=1
-                    time.sleep(3)
+                    print('<2000mm, inflated')
+                    time.sleep(1)
+                    
             else:
                 if flag_p==1:
                     write_pneu('Z')
                     write_pneu('B1400') # deflate
-                    time.sleep(5)
-                    write_pneu('Z')
+                    print('<2000mm, deflated')
+                    time.sleep(3)
+                    write_pneu('Z')                   
                     flag_p=0
-            
-        if min_depth<1200:#1000mm=1m
+        
+        if min_depth<600:#1000mm=1m make this 1200!!!!!!!!!
             # 2.1 person = All pull/release
-            if pcount>=1 and flag_m1!=1: # in released state
+            mindepthcount+=1
+            if pcount==1: # in released state
+                print('1 person! pullup all')
                 write_dxl('7\n') # pull all
                 flag_m1=1 # Pulled up
+                flag_m2=1
             elif pcount>=2: # withdrawal
+                print('more than 2p, withdraw')
                 write_pneu('Z')
                 write_pneu('A1500') #inflate
                 flag_p=1
                 time.sleep(5)
                 write_dxl('8\n') # release all
                 flag_m1=0 # Released
-                time.sleep(7.5)
+                flag_m2=0
                 
             # 2.2 object = respond left/right
-            elif pcount == 0:
+            elif pcount == 0 and mindepthcount>3:
+                print('OBJECT DETECTED!')
+                mindepthcount=0
                 if ind[1]<280 and flag_m1!=1: # Detect left
+                    print('dep '+ str(min_depth) + ' - idx ' + str(ind[1])+'  LEFT up')
                     write_dxl('1\n') # Pull left
                     flag_m1 = 1 # M1 Pulled
-                    if flag_m2==1: #M2 Pulled
-                        flag_m1=0
-                    print('dep '+ str(min_depth) + ' - idx ' + str(ind[1])+'  LEFT')
+
+                elif ind[1]<280 and flag_m1==1 and flag_m2==1:
+                    print('right was up, releasing right')
+                    write_dxl('4\n') # release right
+                    flag_m2=0
                     
                 if ind[1]>320 and flag_m2!=1: # Detect right
+                    print('dep '+ str(min_depth) + ' - idx ' + str(ind[1])+'  RIGHT up')
                     write_dxl('2\n') # Pull right
-                    flag_m2 = 1
-                    if flag_m1==1:
-                        flag_m2=0
-                    print('dep '+ str(min_depth) + ' - idx ' + str(ind[1])+'  RIGHT')
+                    flag_m2 = 1 # M2 Pulled
+                    
+
+                elif ind[1]>320 and flag_m2==1 and flag_m1==1: # Detect right
+                    print('left was up, releasing left')
+                    write_dxl('3\n') # release left
+                    flag_m1=0
+
             
-        # nothing in 1000m = release all
+        # nothing in 1200mmm = release all
         elif flag_m1!=0 or flag_m2!=0:
+            print('nothing <1200, release all')
             write_pneu('Z')
             write_pneu('A1500') #inflate
             flag_p=1
             time.sleep(5)
             write_dxl('8\n') #release all
             flag_m1=0
+            flag_m2=0
             
         pcount=0
+        time.sleep(0.25)
 
 ################################################################
         
