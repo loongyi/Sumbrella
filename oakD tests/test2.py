@@ -322,27 +322,28 @@ with dai.Device(pipeline) as device:
             # 2.2 object = respond left/right
             elif pcount == 0 and mindepthcount>3:
                 print('OBJECT DETECTED!')
-                mindepthcount=0
+                mindepthcount = 0
                 if ind[1]<280 and flag_m1!=1: # Detect left
                     print('dep '+ str(min_depth) + ' - idx ' + str(ind[1])+'  LEFT up')
                     write_dxl('1\n') # Pull left
                     flag_m1 = 1 # M1 Pulled
-
-                elif ind[1]<280 and flag_m1==1 and flag_m2==1:
-                    print('right was up, releasing right')
-                    write_dxl('4\n') # release right
-                    flag_m2=0
+                    flag_m2 = 0
+                #elif ind[1]<280 and flag_m1==1 and flag_m2==1:
+                 #   print('right was up, releasing right')
+                 #   write_dxl('4\n') # release right
+                 #   flag_m2=0
                     
                 if ind[1]>320 and flag_m2!=1: # Detect right
                     print('dep '+ str(min_depth) + ' - idx ' + str(ind[1])+'  RIGHT up')
                     write_dxl('2\n') # Pull right
                     flag_m2 = 1 # M2 Pulled
+                    flag_m1 = 0
                     
 
-                elif ind[1]>320 and flag_m2==1 and flag_m1==1: # Detect right
-                    print('left was up, releasing left')
-                    write_dxl('3\n') # release left
-                    flag_m1=0
+               # elif ind[1]>320 and flag_m2==1 and flag_m1==1: # Detect right
+                  #  print('left was up, releasing left')
+                  #  write_dxl('3\n') # release left
+                   # flag_m1=0
 
             
         # nothing in 1200mmm = release all
