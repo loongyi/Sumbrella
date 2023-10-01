@@ -8,7 +8,7 @@ import time
 import serial
 
 #for serial connection or not
-testmode =1 # don't change this; fix at 0
+testmode =0 # don't change this; fix at 0
 
 if testmode ==0:
     #Establish Serial ports
