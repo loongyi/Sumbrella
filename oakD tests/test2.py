@@ -8,7 +8,7 @@ import time
 import serial
 
 #for serial connection or not
-testmode =0 # don't change this; fix at 0
+testmode =1 # don't change this; fix at 0
 
 if testmode ==0:
     #Establish Serial ports
@@ -29,7 +29,7 @@ if testmode ==0:
         time.sleep(0.05)
         data = pneumatic.readline()
         return data
-        #time.sleep(0.05)
+        #time.sleep(0.05)tyhrst
         #data = 'PNEUMATIC sent: ' + str(bbbb)
     #data = arduino.readline()
 

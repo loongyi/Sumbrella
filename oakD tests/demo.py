@@ -16,8 +16,9 @@ if testmode ==0:
     arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=1)
     pneumatic = serial.Serial(port='/dev/ttyS0',baudrate=115200, timeout=.1)
     controller = serial.Serial(port='/dev/ttyACM1',baudrate=115200, timeout=1)
-    arduino.write(bytes('00', 'utf-8'))
-    pneumatic.write(bytes('Z', 'utf-8'))
+
+    #arduino.write(bytes('00', 'utf-8'))
+    #pneumatic.write(bytes('Z', 'utf-8'))
     def write_dxl(eeee):
         arduino.write(bytes(eeee, 'utf-8'))
         time.sleep(0.05)
@@ -37,8 +38,8 @@ if testmode ==0:
     def write_control(cccc):
         controller.write(bytes(cccc, 'utf-8'))
         time.sleep(0.05)
-        data = controller.readline()
-        return data
+        #data = controller.readline()
+        #return data
         
 if testmode ==1:
     # no serial connections
@@ -46,7 +47,7 @@ if testmode ==1:
     def write_dxl(eeee):
         #arduino.write(bytes(eeee, 'utf-8'))
         time.sleep(0.05)
-        data = 'Serial sent: ' + str(eeee)
+        data = 'DXL sent: ' + str(eeee)
         print(data)
         return data
 
@@ -55,16 +56,25 @@ if testmode ==1:
         #pneumatic.write(bytes(bbbb, 'utf-8'))
         time.sleep(0.05)
         #data = arduino.readline()
-        data = 'Serial sent: ' + str(bbbb)
+        data = 'Pneumatic sent: ' + str(bbbb)
         print(data)
         return data
     
     def write_control(cccc):
-        #controller.write(bytes(cccc, 'utf-8'))
+        controller.write(bytes(cccc, 'utf-8'))
         time.sleep(0.05)
-        data = 'Serial sent: ' + str(cccc)
+        data = 'Controller sent: ' + str(cccc)
         print(data)
         return data
+    
+    def read_control():
+        data = controller.readline().rstrip()
+        if data:
+            dataaa = int(float(data))
+            print (dataaa)
+            return dataaa
+        else:
+            return 11
     
     
 # Get argument (trained NN model) first
@@ -276,7 +286,10 @@ with dai.Device(pipeline) as device:
 ######################## Editable ##############################
 # Pre testing- boot up movements
     write_pneu('Z')
+    time.sleep(3)
+    write_pneu('A1400')
     write_pneu('B1400')
+    write_pneu('C1400')
     time.sleep(4)
     write_pneu('B990')
     
@@ -291,11 +304,14 @@ with dai.Device(pipeline) as device:
     write_pneu('Z')
 ################################################################
     STATE = 0
-    
+    COMMAND =11
+    print('READY')
     while True:
         if controller.in_waiting:
-            COMMAND = controller.readline()
-        PRESSURES = pneumatic.readline()
+            COMMAND = read_control()
+        #PRESSURES = pneumatic.readline()
+        elif COMMAND!=10:
+            COMMAND=11
 
         if COMMAND == 1:
             write_pneu('A1500') #inflate
@@ -329,6 +345,7 @@ with dai.Device(pipeline) as device:
             STATE6()
 
         if COMMAND == 10: #Controller set to AUTO mode
+            write_control('11\n')
             inPreview = previewQueue.get()
             inDet = detectionNNQueue.get()
             depth = depthQueue.get()
@@ -417,7 +434,7 @@ with dai.Device(pipeline) as device:
                 print(str(pcount)+'people detected!  '+str(min_depth)+' - idx '+str(ind[1]))
                 if pcount >= 1: # detect person (pcount) more than 1
                     if flag_p==0: # 0=deflated, 1=inflated
-                        write_control('0')
+                        write_control('0\n')
                         #write_pneu('Z') #Z=all deflated
                         write_pneu('A1500') #inflate
                         write_pneu('B1500') #inflate
@@ -429,7 +446,7 @@ with dai.Device(pipeline) as device:
                 else:
                     if flag_p==1:
                         #write_pneu('Z')
-                        write_control('0')
+                        write_control('0\n')
                         write_pneu('A990') # deflate
                         write_pneu('B990') # deflate
                         write_pneu('C990') # deflate
@@ -442,20 +459,20 @@ with dai.Device(pipeline) as device:
                 # 2.1 person = All pull/release
                 mindepthcount+=1
                 if pcount==1: # in released state
-                    write_control('7')
+                    write_control('7\n')
                     print('1 person! pullup all')
                     write_dxl('7\n') # pull all
                     flag_m1=1 # Pulled up
                     flag_m2=1
                 elif pcount>=2: # withdrawal
-                    write_control('8')
+                    write_control('8\n')
                     print('more than 2p, withdraw')
                     #write_pneu('Z')
                     write_pneu('A1500') #inflate
                     write_pneu('B1500') #inflate
                     write_pneu('C1500') #inflate
                     flag_p=1
-                    time.sleep(4.5)
+                    time.sleep(2)
                     write_dxl('8\n') # release all
                     flag_m1=0 # Released
                     flag_m2=0
@@ -466,7 +483,7 @@ with dai.Device(pipeline) as device:
                     mindepthcount = 0
                     if ind[1]<280 and flag_m1!=1: # Detect left
                         print('dep '+ str(min_depth) + ' - idx ' + str(ind[1])+'  LEFT up')
-                        write_control('1')
+                        write_control('1\n')
                         write_dxl('1\n') # Pull left
                         flag_m1 = 1 # M1 Pulled
                         flag_m2 = 0
@@ -477,7 +494,7 @@ with dai.Device(pipeline) as device:
                         
                     if ind[1]>320 and flag_m2!=1: # Detect right
                         print('dep '+ str(min_depth) + ' - idx ' + str(ind[1])+'  RIGHT up')
-                        write_control('2')
+                        write_control('2\n')
                         write_dxl('2\n') # Pull right
                         flag_m2 = 1 # M2 Pulled
                         flag_m1 = 0
@@ -491,14 +508,14 @@ with dai.Device(pipeline) as device:
                 
             # nothing in 1200mmm = release all
             elif flag_m1!=0 or flag_m2!=0:
-                write_control('8')
+                write_control('8\n')
                 print('nothing <1200, release all')
                 #write_pneu('Z')
                 write_pneu('A1500') #inflate
                 write_pneu('B1500') #inflate
                 write_pneu('C1500') #inflate
                 flag_p=1
-                time.sleep(4.5)
+                time.sleep(2)
                 write_dxl('8\n') #release all
                 flag_m1=0
                 flag_m2=0

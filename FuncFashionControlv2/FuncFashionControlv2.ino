@@ -284,7 +284,6 @@ void loop() {
   case 9://all wave
     if (state != prev_state){ 
       time=0; 
-
     }
     wave(2);
     break;
@@ -540,7 +539,7 @@ int pullreleasevel3(int mstate, double posINIT, int dir) {
 }
 
 //wave paramters
-#define AMPLITUDE 2048 // Amplitude of the sine wave every 2048 is 180 degrees
+#define AMPLITUDE 2500 // Amplitude of the sine wave every 2048 is 180 degrees
 //#define FREQUENCY 2.0     // Frequency of the sine wave (Hz)
 #define PHASE_SHIFT1 0.0  // Phase shift of the sine wave (radians)
 #define PHASE_SHIFT2 PI/2 // Phase shift of the sine wave (radians)
@@ -621,13 +620,13 @@ void wave(float FREQUENCY) {
   time += TIME_STEP;
     DEBUG_SERIAL.print(time);
     DEBUG_SERIAL.print("   ");
-    DEBUG_SERIAL.print(Pi1);
+    DEBUG_SERIAL.print(Pi2);
     DEBUG_SERIAL.print("   ");
-    DEBUG_SERIAL.print(act1);
+    DEBUG_SERIAL.print(act2);
     DEBUG_SERIAL.print("   ");
-    DEBUG_SERIAL.print(thetap1);
+    DEBUG_SERIAL.print(thetap2);
     DEBUG_SERIAL.println("   ");
-    DEBUG_SERIAL.print(thetas1);
+    DEBUG_SERIAL.print(thetas2);
     DEBUG_SERIAL.println("   ");
 }
 
