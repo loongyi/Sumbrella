@@ -135,7 +135,7 @@ int flag_m1d = 0;
 int flag_m2d = 0;
 int flag_m3d = 0;
 
-//motor activation states // 0 = pull up, 1 = release1
+//motor activation states // 0 = pull up, 1 = release
 int m1state = 100;
 int m2state = 100;
 int m3state = 100;
@@ -147,22 +147,25 @@ double m3disres = 0;
 
 int dist = 0;
 int state = 0;
-int prev_state=0;
-int msg = 0, rejectedmsg=0;
+int prev_state = 0;
+int msg = 0, rejectedmsg = 0;
 
 static float time = 0.0;
 
+int pullcurrentlimit = 50, releasecurrentlimit = 20;
+int releasepower = -100;
+
 void loop() {
 
-  if ( Serial.available() && (flag_m1+flag_m2+flag_m3==0) ) {
+  if (Serial.available() && (flag_m1 + flag_m2 + flag_m3 == 0)) {
     //command from RPI received
     //arduino receives serial message when pi +camera detects person
 
     msg = Serial.readStringUntil('\n').toInt();
 
     //extract dsitance and state from  received integer
-    state = msg % 10;
-    dist = (msg / 10) % 10;
+    state = msg % 10; //ones
+    dist = (msg / 10) % 10; //tens
     DEBUG_SERIAL.print("DIST: ");
     DEBUG_SERIAL.print(dist);
     DEBUG_SERIAL.print("  STATE: ");
@@ -170,9 +173,8 @@ void loop() {
 
     //motor enable flags, serviced by motor routines
     Serial.flush();
-  }
-  else if (Serial.available() && flag_m1+flag_m2+flag_m3>0){
-   rejectedmsg = Serial.readStringUntil('\n').toInt();
+  } else if (Serial.available() && flag_m1 + flag_m2 + flag_m3 > 0) {
+    rejectedmsg = Serial.readStringUntil('\n').toInt();
   }
 
 
@@ -188,119 +190,149 @@ void loop() {
 
   //we are currently doubling up on the travel, if the robot goes up , goes down a bit, then goes up again, the robot cant get back to initial state
   switch (state) {
-  case 0: //STOP motor //resets all flags
-    goals[1]=0;flag_m1=0;m1disres=0;
-    goals[2]=0;flag_m2=0;m2disres=0;
-    goals[3]=0;flag_m3=0;m3disres=0;
+    case 0:  //STOP motor //resets all flags
+      goals[1] = 0;
+      flag_m1 = 0;
+      m1disres = 0;
+      goals[2] = 0;
+      flag_m2 = 0;
+      m2disres = 0;
+      goals[3] = 0;
+      flag_m3 = 0;
+      m3disres = 0;
 
-  // case 1: // LIFT LEFT UP
-  //   if (state != prev_state){ 
-  //     flag_m1 = 1; 
-  //     posINT_m1 = dxl.getPresentPosition(1);
-  //   }
-  //   if ((m1state==1)||(m1state==100)){m1state = 0;}
-    
-  //   break;
+      // case 1: // LIFT LEFT UP
+      //   if (state != prev_state){
+      //     flag_m1 = 1;
+      //     posINT_m1 = dxl.getPresentPosition(1);
+      //   }
+      //   if ((m1state==1)||(m1state==100)){m1state = 0;}
 
-  case 1: // LIFT LEFT UP
-    if (state != prev_state){ 
-      flag_m1 = 1; flag_m2=1;
-      posINT_m1 = dxl.getPresentPosition(1);
-    }
-    if ((m1state==1)||(m1state==100)){m1state = 0;}
-    if ((m2state == 0)){m2state= 1;}
-    break;
+      //   break;
 
- // case 2: // LIFT RIGHT UP
-    // if (state != prev_state){ 
-    //   flag_m2 = 1;
-    //   posINT_m2 = dxl.getPresentPosition(2);
-    // }
-    // if ((m2state==1)||(m2state==100)){m2state = 0;}
-    // if ((m1state == 0)){m1state= 1;}
-    // break;
+    case 1:  // LIFT LEFT UP
+      if (state != prev_state) {
+        flag_m1 = 1;
+        flag_m2 = 1;
+        posINT_m1 = dxl.getPresentPosition(1);
+      }
+      if ((m1state == 1) || (m1state == 100)) { m1state = 0; }
+      if ((m2state == 0)) { m2state = 1; }
+      break;
 
-  case 2: // LIFT RIGHT UP
-    if (state != prev_state){ 
-      flag_m2 = 1;flag_m1=1;
-      posINT_m2 = dxl.getPresentPosition(2);
-    }
-    if ((m2state==1)||(m2state==100)){m2state = 0;}
-    if ((m1state == 0)){m1state= 1;}
-    break;
+      // case 2: // LIFT RIGHT UP
+      // if (state != prev_state){
+      //   flag_m2 = 1;
+      //   posINT_m2 = dxl.getPresentPosition(2);
+      // }
+      // if ((m2state==1)||(m2state==100)){m2state = 0;}
+      // if ((m1state == 0)){m1state= 1;}
+      // break;
 
-  case 3: //RELEASE LEFT DOWN
-    if ((state != prev_state)){ 
-      flag_m1 = 1;
-      posINT_m1 = dxl.getPresentPosition(1);
-    }
-    if (m1state==0){m1state = 1;}
-    break;
+    case 2:  // LIFT RIGHT UP
+      if (state != prev_state) {
+        flag_m2 = 1;
+        flag_m1 = 1;
+        posINT_m2 = dxl.getPresentPosition(2);
+      }
+      if ((m2state == 1) || (m2state == 100)) { m2state = 0; }
+      if ((m1state == 0)) { m1state = 1; }
+      break;
 
-  case 4://RELEASE RGHT DOWN 
-    if (state != prev_state){ 
-      flag_m2 = 1; 
-      posINT_m2 = dxl.getPresentPosition(2);
-    }
-    if (m2state==0){m2state = 1;}
-    break;
+    case 3:  //RELEASE LEFT DOWN
+      if ((state != prev_state)) {
+        flag_m1 = 1;
+        posINT_m1 = dxl.getPresentPosition(1);
+      }
+      if (m1state == 0) { m1state = 1; }
+      break;
 
-  case 5://Lift back up
-    if (state != prev_state){ 
-      flag_m3 = 1; 
-      posINT_m3 = dxl.getPresentPosition(3);
-    }
-    m3state = 0;
-    break;
+    case 4:  //RELEASE RGHT DOWN
+      if (state != prev_state) {
+        flag_m2 = 1;
+        posINT_m2 = dxl.getPresentPosition(2);
+      }
+      if (m2state == 0) { m2state = 1; }
+      break;
 
-  case 6://release back down
-    if (state != prev_state){ 
-      flag_m3 = 1;
-      posINT_m3 = dxl.getPresentPosition(3);
-    }
-    m3state = 1;
-    break;
+    case 5:  //Lift back up
+      if (state != prev_state) {
+        flag_m3 = 1;
+        posINT_m3 = dxl.getPresentPosition(3);
+      }
+      m3state = 0;
+      break;
 
-  case 7://all pull up
-     if (state != prev_state){ 
-      flag_m3 = 1; flag_m2 = 1; flag_m1 = 1;
-      posINT_m1 = dxl.getPresentPosition(1);
-      posINT_m2 = dxl.getPresentPosition(2);
-      posINT_m3 = dxl.getPresentPosition(3);
-     }
-     m3state = 0; m2state = 0; m1state = 0;
-    break;
+    case 6:  //release back down
+      if (state != prev_state) {
+        flag_m3 = 1;
+        posINT_m3 = dxl.getPresentPosition(3);
+      }
+      m3state = 1;
+      break;
 
-  case 8://all release
-     if (state != prev_state){ 
-      flag_m3 = 1; flag_m2 = 1; flag_m1 = 1;
-      posINT_m1 = dxl.getPresentPosition(1);
-      posINT_m2 = dxl.getPresentPosition(2);
-      posINT_m3 = dxl.getPresentPosition(3);
-     }
-     m3state = 1; m2state = 1; m1state = 1;    
-    break;
+    case 7:  //all pull up
+      if (state != prev_state) {
+        flag_m3 = 1;
+        flag_m2 = 1;
+        flag_m1 = 1;
+        posINT_m1 = dxl.getPresentPosition(1);
+        posINT_m2 = dxl.getPresentPosition(2);
+        posINT_m3 = dxl.getPresentPosition(3);
+      }
+      m3state = 0;
+      m2state = 0;
+      m1state = 0;
+      break;
 
-  case 9://all wave
-    if (state != prev_state){ 
-      time=0; 
-    }
-    wave(2);
-    break;
+    case 8:  //all release
+      if (state != prev_state) {
+        flag_m3 = 1;
+        flag_m2 = 1;
+        flag_m1 = 1;
+        posINT_m1 = dxl.getPresentPosition(1);
+        posINT_m2 = dxl.getPresentPosition(2);
+        posINT_m3 = dxl.getPresentPosition(3);
+      }
+      m3state = 1;
+      m2state = 1;
+      m1state = 1;
+      break;
+
+    case 9:  //all wave
+      if (state != prev_state) {
+        time = 0;
+      }
+      wave(dist); //input frequency- changes speed 
+      break;
   }
 
-    // DEBUG_SERIAL.print(prev_state);
-    // DEBUG_SERIAL.print("  ");
-    // DEBUG_SERIAL.print(flag_m1);
-    // DEBUG_SERIAL.print("  ");
-    // DEBUG_SERIAL.print(posINT_m1);
-    // DEBUG_SERIAL.print("  ");
-    // DEBUG_SERIAL.println(posStroke_m1);
+  // DEBUG_SERIAL.print(prev_state);
+  // DEBUG_SERIAL.print("  ");
+  // DEBUG_SERIAL.print(flag_m1);
+  // DEBUG_SERIAL.print("  ");
+  // DEBUG_SERIAL.print(posINT_m1);
+  // DEBUG_SERIAL.print("  ");
+  // DEBUG_SERIAL.println(posStroke_m1);
 
-  if((state!=0)&&(state!=9)){ 
+  if ((state != 0) && (state != 9)) {
     pullreleasevel1(m1state, posINT_m1, -1);
     pullreleasevel2(m2state, posINT_m2, 1);
     pullreleasevel3(m3state, posINT_m3, -1);
+  }
+
+  //overcurent protection
+  if (abs(dxl.getPresentCurrent(1, UNIT_PERCENT)) > 66) {
+    goals[1] = 0;
+    flag_m1 = 0;
+  }
+  if (abs(dxl.getPresentCurrent(2, UNIT_PERCENT)) > 66) {
+    goals[2] = 0;
+    flag_m2 = 0;
+  }
+  if (abs(dxl.getPresentCurrent(3, UNIT_PERCENT)) > 66) {
+    goals[3] = 0;
+    flag_m3 = 0;
   }
 
   //write them to the motors
@@ -317,17 +349,6 @@ void loop() {
   //   if (flag_m3==0){
   //   goals[3]=0;}
   // }
-  //overcurent protection
-
-     if (abs(dxl.getPresentCurrent(1, UNIT_PERCENT))>66){
-        goals[1] = 0; flag_m1 = 0;
-     }
-     if (abs(dxl.getPresentCurrent(2, UNIT_PERCENT))>66){
-        goals[2] = 0; flag_m2 = 0;
-     }
-     if (abs(dxl.getPresentCurrent(3, UNIT_PERCENT))>66){
-        goals[3] = 0; flag_m3 = 0;
-     }
 }
 
 void SYNCW() {
@@ -379,36 +400,36 @@ int pullreleasevel1(int mstate, double posINIT, int dir) {
   m1state = mstate;
 
   if (mstate == 0) {  //pullup
-    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > 50) {
+    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > pullcurrentlimit) {
       goals[mo] = 0;
       flag_m1 = 0;
-      posStroke_m1 = abs(posINIT - posEND)+m1disres;
+      posStroke_m1 = abs(posINIT - posEND) + m1disres;
     }
     if (flag_m1 == 1) {
       //if(testcount>30){flag_m1=0;testcount=0;}
       //testcount+=1;
       goals[mo] = 400 * dir;
-      posStroke_m1 = abs(posINIT - posEND)+m1disres;
+      posStroke_m1 = abs(posINIT - posEND) + m1disres;
       //DEBUG_SERIAL.print("Pull: RUN   ");
     } else {
       //DEBUG_SERIAL.print("Pull: STOP   ");
     }
-  } 
-  else if (mstate == 1) {  //release
+  } else if (mstate == 1) {  //release
     flag_m1d = 1;
-    m1disres=abs(posINIT - posEND);
-    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT))>50){
-        goals[mo] = 0;
-        flag_m1 = 0;
-        //posStroke_m1 = 0;
+    m1disres = abs(posINIT - posEND);
+    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > pullcurrentlimit) {
+      goals[mo] = 0;
+      flag_m1 = 0;
+      //posStroke_m1 = 0;
     }
+
     if (flag_m1 == 1) {
-      goals[mo] = -40 * dir;
+      goals[mo] = releasepower * dir;
       //DEBUG_SERIAL.print("Rel: RUN   ");
     } else {
       //DEBUG_SERIAL.print("Rel: STOP   ");
     }
-    if (abs(posINIT - posEND) > posStroke_m1 * 0.999) {
+    if ((abs(posINIT - posEND) > posStroke_m1 * 0.999) || (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > releasecurrentlimit)) {
 
       goals[mo] = 0;
       flag_m1 = 0;
@@ -433,40 +454,38 @@ int pullreleasevel2(int mstate, double posINIT, int dir) {
 
   if (mstate == 0) {  //pullup
 
-    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > 50) {
+    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > pullcurrentlimit) {
       goals[mo] = 0;
       flag_m2 = 0;
-      posStroke_m2 = abs(posINIT - posEND)+m2disres;
-      
+      posStroke_m2 = abs(posINIT - posEND) + m2disres;
     }
     if (flag_m2 == 1) {
       //if(testcount2>30){flag_m2=0;testcount2=0;}
       //testcount2+=1;
 
       goals[mo] = 400 * dir;
-      posStroke_m2 = abs(posINIT - posEND)+m2disres;
+      posStroke_m2 = abs(posINIT - posEND) + m2disres;
       //DEBUG_SERIAL.print("Pull: RUN   ");
     } else {
       //DEBUG_SERIAL.print("Pull: STOP   ");
     }
-  } 
-  else if (mstate == 1) {  //release
+  } else if (mstate == 1) {  //release
     flag_m2d = 1;
-    m2disres=(posStroke_m2 - abs(posINIT - posEND));
-    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT))>50){
-        goals[mo] = 0;
-        flag_m2 = 0;
-        //posStroke_m2 = 0;      
+    m2disres = (posStroke_m2 - abs(posINIT - posEND));
+    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > pullcurrentlimit) {
+      goals[mo] = 0;
+      flag_m2 = 0;
+      //posStroke_m2 = 0;
     }
     if (flag_m2 == 1) {
-      
-      goals[mo] = -40 * dir;
+
+      goals[mo] = releasepower * dir;
       //DEBUG_SERIAL.print("Rel: RUN   ");
 
     } else {
       //DEBUG_SERIAL.print("Rel: STOP   ");
     }
-    if (abs(posINIT - posEND) > posStroke_m2 * 0.999) {
+    if ((abs(posINIT - posEND) > posStroke_m2 * 0.999 ) || (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > releasecurrentlimit)) {
       goals[mo] = 0;
       flag_m2 = 0;
       posStroke_m2 = 0;
@@ -489,71 +508,69 @@ int pullreleasevel2(int mstate, double posINIT, int dir) {
   //  DEBUG_SERIAL.println(m2disres);
 }
 int pullreleasevel3(int mstate, double posINIT, int dir) {
-   int mo = 3;
+  int mo = 3;
 
   double posEND = dxl.getPresentPosition(mo);
   m3state = mstate;
 
   if (mstate == 0) {  //pullup
 
-    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > 50) {
+    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > pullcurrentlimit) {
       goals[mo] = 0;
       flag_m3 = 0;
-      posStroke_m3 = abs(posINIT - posEND)+m3disres;
-      
+      posStroke_m3 = abs(posINIT - posEND) + m3disres;
     }
     if (flag_m3 == 1) {
       //if(testcount3>30){flag_m3=0;testcount3=0;}
       //testcount3+=1;
       goals[mo] = 400 * dir;
-      posStroke_m3 = abs(posINIT - posEND)+m3disres;
+      posStroke_m3 = abs(posINIT - posEND) + m3disres;
       //DEBUG_SERIAL.print("Pull: RUN   ");
     } else {
       //DEBUG_SERIAL.print("Pull: STOP   ");
     }
-  } 
-  else if (mstate == 1) {  //release
+  } else if (mstate == 1) {  //release
     flag_m3d = 1;
-    m3disres=(posStroke_m3 - abs(posINIT - posEND));
-    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT))>50){
-        goals[mo] = 0;
-        flag_m3 = 0;
-        //posStroke_m3 = 0;      
+    m3disres = (posStroke_m3 - abs(posINIT - posEND));
+    if (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > pullcurrentlimit) {
+      goals[mo] = 0;
+      flag_m3 = 0;
+      //posStroke_m3 = 0;
     }
     if (flag_m3 == 1) {
-      
-      goals[mo] = -40 * dir;
+
+      goals[mo] = releasepower * dir;
       //DEBUG_SERIAL.print("Rel: RUN   ");
 
     } else {
       //DEBUG_SERIAL.print("Rel: STOP   ");
     }
-    if (abs(posINIT - posEND) > posStroke_m3 * 0.99) {
+    if ((abs(posINIT - posEND) > posStroke_m3 * 0.99) || (abs(dxl.getPresentCurrent(mo, UNIT_PERCENT)) > releasecurrentlimit)) {
       goals[mo] = 0;
       flag_m3 = 0;
       posStroke_m3 = 0;
       flag_m3d = 0;
       m3disres = 0;
     }
-}
+  }
 }
 
 //wave paramters
-#define AMPLITUDE 2500 // Amplitude of the sine wave every 2048 is 180 degrees
+#define AMPLITUDE 2500  // Amplitude of the sine wave every 2048 is 180 degrees
 //#define FREQUENCY 2.0     // Frequency of the sine wave (Hz)
-#define PHASE_SHIFT1 0.0  // Phase shift of the sine wave (radians)
-#define PHASE_SHIFT2 PI/2 // Phase shift of the sine wave (radians)
-#define PHASE_SHIFT3 2*PI/3 // Phase shift of the sine wave (radians)
-#define TIME_STEP 0.01    // Time step for each iteration (seconds)
+#define PHASE_SHIFT1 0.0         // Phase shift of the sine wave (radians)
+#define PHASE_SHIFT2 PI / 2      // Phase shift of the sine wave (radians)
+#define PHASE_SHIFT3 2 * PI / 3  // Phase shift of the sine wave (radians)
+#define TIME_STEP 0.01           // Time step for each iteration (seconds)
 #define Kp 0.6
 
-double thetap1 = 0; // present position in radial space
-double thetap2= 0; // present position in radial space
-double thetap3 = 0; // present position in radial space
+double thetap1 = 0;  // present position in radial space
+double thetap2 = 0;  // present position in radial space
+double thetap3 = 0;  // present position in radial space
 
-float thetas1 = 0; //target position in radial space
-float thetas2 = 0; //target position in radial space
-float thetas3 = 0; //target position in radial space
+float thetas1 = 0;  //target position in radial space
+float thetas2 = 0;  //target position in radial space
+float thetas3 = 0;  //target position in radial space
 
 float error1 = 0;
 float error2 = 0;
@@ -573,44 +590,43 @@ float calculateSinusoidalAngle(float amplitude, float frequency, float phaseShif
 
 void wave(float FREQUENCY) {
 
-  if (time < TIME_STEP){
-    goals[1]=-50;
-    goals[2]=50;
-    goals[3]=-50;
+  if (time < TIME_STEP) {
+    goals[1] = -50;
+    goals[2] = 50;
+    goals[3] = -50;
     SYNCW();
     delay(1000);
     Pi1 = dxl.getPresentPosition(1);
     Pi2 = dxl.getPresentPosition(2);
     Pi3 = dxl.getPresentPosition(3);
-
   }
 
-  thetas1 = Pi1+calculateSinusoidalAngle(AMPLITUDE, FREQUENCY, PHASE_SHIFT1, time);
-  thetas2 = Pi2+calculateSinusoidalAngle(AMPLITUDE, FREQUENCY, PHASE_SHIFT1, time + PI);
-  thetas3 = Pi3+calculateSinusoidalAngle(AMPLITUDE, FREQUENCY, PHASE_SHIFT1, time );
+  thetas1 = Pi1 + calculateSinusoidalAngle(AMPLITUDE, FREQUENCY, PHASE_SHIFT1, time);
+  thetas2 = Pi2 + calculateSinusoidalAngle(AMPLITUDE, FREQUENCY, PHASE_SHIFT1, time + PI);
+  thetas3 = Pi3 + calculateSinusoidalAngle(AMPLITUDE, FREQUENCY, PHASE_SHIFT1, time);
 
   thetap1 = dxl.getPresentPosition(1);
   thetap2 = dxl.getPresentPosition(2);
   thetap3 = dxl.getPresentPosition(3);
 
-  error1 = thetas1-thetap1;
-  error2 = thetas2-thetap2;
-  error3 = thetas3-thetap3;
+  error1 = thetas1 - thetap1;
+  error2 = thetas2 - thetap2;
+  error3 = thetas3 - thetap3;
 
   int Vbase = 1;
-  int blim=-100, ulim=100;
-  
-  act1 = Kp*error1;
-  act2 = Kp*error2;
-  act3 = Kp*error3;
+  int blim = -100, ulim = 100;
 
-  act1=constrain(act1,blim,ulim);
-  act2=constrain(act2,blim,ulim);
-  act3=constrain(act3,blim,ulim);
+  act1 = Kp * error1;
+  act2 = Kp * error2;
+  act3 = Kp * error3;
 
-  act1 = map(act1,blim,ulim, Vbase*blim, Vbase*ulim);
-  act2 = map(act2,blim,ulim, Vbase*blim, Vbase*ulim);
-  act2 = map(act3,blim,ulim, Vbase*blim, Vbase*ulim);
+  act1 = constrain(act1, blim, ulim);
+  act2 = constrain(act2, blim, ulim);
+  act3 = constrain(act3, blim, ulim);
+
+  act1 = map(act1, blim, ulim, Vbase * blim, Vbase * ulim);
+  act2 = map(act2, blim, ulim, Vbase * blim, Vbase * ulim);
+  act2 = map(act3, blim, ulim, Vbase * blim, Vbase * ulim);
 
   goals[1] = act1;
   goals[2] = -act2;
@@ -618,16 +634,16 @@ void wave(float FREQUENCY) {
   //goals[2] = map((int)motor2Angle, -AMPLITUDE, AMPLITUDE, 0, 4095);
   //goals[3] = map((int)motor2Angle, -AMPLITUDE, AMPLITUDE, 0, 4095);
   time += TIME_STEP;
-    DEBUG_SERIAL.print(time);
-    DEBUG_SERIAL.print("   ");
-    DEBUG_SERIAL.print(Pi2);
-    DEBUG_SERIAL.print("   ");
-    DEBUG_SERIAL.print(act2);
-    DEBUG_SERIAL.print("   ");
-    DEBUG_SERIAL.print(thetap2);
-    DEBUG_SERIAL.println("   ");
-    DEBUG_SERIAL.print(thetas2);
-    DEBUG_SERIAL.println("   ");
+  DEBUG_SERIAL.print(time);
+  DEBUG_SERIAL.print("   ");
+  DEBUG_SERIAL.print(Pi2);
+  DEBUG_SERIAL.print("   ");
+  DEBUG_SERIAL.print(act2);
+  DEBUG_SERIAL.print("   ");
+  DEBUG_SERIAL.print(thetap2);
+  DEBUG_SERIAL.println("   ");
+  DEBUG_SERIAL.print(thetas2);
+  DEBUG_SERIAL.println("   ");
 }
 
 void modechange(String mode) {
@@ -650,7 +666,7 @@ void modechange(String mode) {
 
 
 
-  /* syncWrite
+/* syncWrite
   Structures containing the necessary information to process the 'syncWrite' packet.
 
   typedef struct XELInfoSyncWrite{
